@@ -1,0 +1,220 @@
+## 導航(把路線圖的shapefile個點的資料提出之後用A* 演算法組合肉組合的未完成品)
+# 提出路線圖中每條路的路線點
+
+from shapely.geometry import shape, LineString,point
+import geopandas as gpd
+import numpy as np
+import matplotlib.pyplot as plt
+import shapely
+shapefile = gpd.read_file(r'C:\Users\user\Desktop\road\ntw_road.shp',crs = 'espg:4326')
+shapefile.crs = {'init':'epsg:4326'}
+shapefile=shapefile.to_crs(epsg=3826)
+shapefile.plot()
+geoms = shapefile['geometry']
+k = type(geoms[5824])
+for n in range (len(geoms)):
+    if type(geoms[n]) == k:
+        mtline = geoms[n]
+        outcoords = [list(i.coords) for i in mtline]
+        outline = shapely.geometry.LineString([i for sublist in outcoords for i in sublist])
+        geoms[n] = outline
+geoms.to_file(driver = 'ESRI Shapefile', filename = 'geoms.shp')
+shapefile2 = gpd.read_file(r'geoms.shp')
+geoms = shapefile2['geometry']
+
+
+# 建構資料庫
+
+import time
+from shapely.geometry import shape, LineString,point
+import geopandas as gpd
+import numpy as np
+import matplotlib.pyplot as plt
+from collections import Counter
+import sys
+def convert_every_part_into_the_list(n):
+    the_list = []
+    for x in range(n):
+        geoms[x]
+        x_array = np.array(geoms[x].xy[1])
+        y_array = np.array(geoms[x].xy[0])
+        x_list = x_array.tolist()
+        y_list = y_array.tolist()
+        lis = list(zip(y_list,x_list))
+        the_list.append(lis)
+    print(1)
+    return the_list
+def convert_every_part_into_the_list_with_id(n):
+    the_list_wid = []
+    for x in range(n):
+        geoms[x]
+        x_array = np.array(geoms[x].xy[1])
+        y_array = np.array(geoms[x].xy[0])
+        x_list = x_array.tolist()
+        y_list = y_array.tolist()
+        lis = list(zip(y_list,x_list))
+        the_list_wid.append(x)
+        the_list_wid.append(lis)
+    print(2)
+    return the_list_wid
+def create_a_list_of_xys_for_counting():
+    xys = []
+    for i in range(len(the_list)):
+        for j in the_list[i]:
+            xys.append(j)
+    print(3)
+    return xys
+def create_a_list_of_xys_wid_for_counting():
+    xyswid = []
+    for i in range(len(the_list)):
+        xyswid.append(i)
+        for j in the_list[i]:
+            xyswid.append(j)
+    print(4)
+    return xyswid
+def find_the_intersectionPs():
+    a = dict(Counter(xys))
+    c = ([key for key,value in a.items()if value > 1])
+    print(5)
+    return c
+def count_and_spot():
+    int_dict = {}
+    for xy in interseptionPs:
+        id = []
+        spot = [i for i,x in enumerate(xyswid) if x==xy]
+        for i in spot:
+            while type(xyswid[i]) != int:
+                i-=1
+            id.append(xyswid[i])
+        int_dict[xy] = id
+    print(6)
+    return int_dict
+n = 99448     #總路線數=99448
+
+the_list = convert_every_part_into_the_list(n) 
+#5sec [[(x,y),(x,y)...],[(x,y),(x,y)...]...]
+the_list_wid = convert_every_part_into_the_list_with_id(n) 
+#5sec [0,[(x,y),(x,y)...],1,[(x,y),(x,y)...]...]
+xys = create_a_list_of_xys_for_counting() 
+#0sec [(x,y),(x,y)...]
+xyswid = create_a_list_of_xys_wid_for_counting() 
+#0sec [0,(x,y),(x,y)...,1(x,y),(x,y)...]
+interseptionPs = find_the_intersectionPs() 
+#0sec 路口的點 ((x,y),(x,y)...)
+int_dict = count_and_spot() 
+#9100sec 把每個路口的經緯度作為key，路段的ID為找到的東東 {(x,y):[id,id...],(x,y):[id,id...]}
+
+#A* 演算法的簡化用的東東 (我不知道到底完成了沒;;)
+
+class AStar:
+    def __init__(self):
+        self.open_set = []
+        self.close_set = []
+        self.interseption_set = interseptionPs
+    def BaseCost(self, *p):
+        x_dis = p[0]
+        print(p)
+        y_dis = p[1]
+        return x_dis + y_dis + (np.sqrt(2) - 2) * min(x_dis, y_dis)
+
+    def HeuristicCost(self, *p):
+        Endp = (300510.89541710226, 2781059.940329581)
+        x_dis = Endp[0]-p[0]
+        y_dis = Endp[1]-p[1]
+        return x_dis + y_dis + (np.sqrt(2) - 2) * min(x_dis, y_dis)
+    
+    def TotalCost(self, *p):
+        return self.BaseCost(*p) + self.HeuristicCost(*p)
+    
+  #  def IsValidPoint(self, *p):
+    
+    def IsIntergrationPoint(self, *p):
+        return self.IsInIntList(*p, self.interseption_set)
+        
+    def IsInIntList(self, *p, *int_list):
+      #  print(int_list)
+        if int_list.count(p) != 0:
+            return True
+        return False
+
+    def IsInPointList(self, *p, point_list):
+        for point in point_list:
+            if point[0] == p[0] and point[1] == p[1]:
+                return True
+        return False
+
+    def IsInOpenList(self, *p):
+        return self.IsInPointList(*p, self.open_set)
+
+    def IsInCloseList(self, *p):
+        return self.IsInPointList(*p, self.close_set)
+
+    def IsStartPoint(self, *p):
+        return p[0] == 0 and p[1] ==0
+
+    def IsEndPoint(self, *p):
+        Endp = (300510.89541710226, 2781059.940329581)
+        return p[0] == Endp[0]  and p[1] == Endp[1]
+
+    def ProcessPoint(self, *p, parent):
+        if self.IsInCloseList(p):
+            return # Do nothing for visited point
+        print('Process Point [', p[0], ',', p[1], ']', ', cost: ', self.TotalCost(p))
+        if not self.IsInOpenList(*p):
+            p.parent = parent
+            p.cost = self.TotalCost(p)
+            self.open_set.append(p)
+
+    def SelectPointInOpenList(self):
+        index = 0
+        selected_index = -1
+        min_cost = sys.maxsize
+        for p in self.open_set:
+            cost = self.TotalCost(*p)
+            if cost < min_cost:
+                min_cost = cost
+                selected_index = index
+            index += 1
+        return selected_index
+				
+				
+# A* 演算法本體(同上;;)
+
+
+def Run(self):
+    start_point = (300336.80057753564, 2781048.805090838)
+   # start_point.cost = 0
+    self.open_set.append(start_point)
+    Endp = (300510.89541710226, 2781059.940329581)
+    while True:
+        index = self.SelectPointInOpenList()
+        if index < 0:
+            print('No path found, algorithm failed!!!')
+            return
+        p = self.open_set[index]
+        
+        if self.IsEndPoint(*p):
+            return len(self.close_set)
+
+        del self.open_set[index]
+        self.close_set.append(p)
+
+        # Process all neighbors
+        if self.IsIntergrationPoint(*p):
+            for i in int_dict[p]:
+                #the_list_wid.index(i) == i*2
+                k = i*2
+                m = the_list_wid[k+1].index(p)
+                n = xyswid.index(i)
+                if type(xyswid(n+m+2)) != int:
+                    self.ProcessPoint(xyswid(n+m+2), p)
+                if type(xyswid(n+m)) != int:
+                    self.ProcessPoint(xyswid(n+m), p)
+        else:
+            o = xyswid.index(p)
+            if type(xyswid[o+1]) != int:
+                self.ProcessPoint(xyswid[o+1], p)
+            if type(xyswid[o-1]) != int:
+                self.ProcessPoint(xyswid[o-1], p)
+c = AStar()
+Run(c)
